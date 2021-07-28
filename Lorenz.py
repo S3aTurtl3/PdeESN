@@ -1,17 +1,8 @@
 import torch
-import torch.nn as nn
 import matplotlib.pyplot as plt
 from scipy.integrate import solve_ivp
-from mpl_toolkits.mplot3d import Axes3D
-from mpl_toolkits.axes_grid1 import make_axes_locatable
 import numpy as np
-from torch.nn import functional as F
-from sklearn.linear_model import LinearRegression, Ridge
-from sklearn.manifold import TSNE, Isomap
-from sklearn.decomposition import PCA
 import torch.sparse
-import math
-from random import randint
 
 from matplotlib import cm
 from collections import OrderedDict
