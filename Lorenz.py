@@ -6,6 +6,7 @@ import torch.sparse
 
 from matplotlib import cm
 from collections import OrderedDict
+import math
 
 
 def lorenz(t, X, sigma, beta, rho):
@@ -47,7 +48,7 @@ def gen_time_series(dt, seconds, initial = (0, 1, 1.05), sig=10, bet=8/3, r=28, 
     return orig
 
 
-def plot_3D(series):
+def plot_3D(series, n):
   '''Plots a given time series in 3D
   series: a 2D numpy array where rows are timesteps and cols are spacial
           coordinates x, y, z'''
