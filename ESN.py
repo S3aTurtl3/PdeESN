@@ -6,7 +6,6 @@ from sklearn.linear_model import LinearRegression, Ridge
 import torch.sparse
 
 
-
 def load_model(pth):
   '''Returns a new ESN instance that uses the same input layer and reservoir initialization of
   another Echo State Network; readout layer weights are not loadded into the model.
@@ -15,14 +14,16 @@ def load_model(pth):
   params = []
   hyperParamNames = ['InSize', 'outSize', 'res', 'avDeg', 'sig', 'rad', 'leak']
   for i, paramName in enumerate(hyperParamNames):
-    startI = pth.index(paramName)
-    startI += len(paramName)
+    startI = pth.index(paramName) + len(paramName)
     if i == len(hyperParamNames) - 1:
-      endI = -1
+      endI = len(pth)
     else:
       endI = pth.index(hyperParamNames[i+1])
-    param = pth[startI:endI]
-    params.append(eval(param))
+    param = float(pth[startI:endI])
+    print(f'{hyperParamNames[i]}: {param}')
+    if int(param) == param:
+      param = int(param)
+    params.append(param)
   # Initialize the network using the same hyperparameters and weights as the given model
   network = ESN(*params)
   weights = torch.load(pth)
@@ -205,7 +206,7 @@ class ESN(nn.Module):
 
         batch_size = input_sequence.shape[0]
 
-        h = hidStart
+        h = self.h0.unsqueeze(0).expand(batch_size, -1)
         out_list = []
         # System values are given as input to the ESN during the washout period; 
         # After the washout the ESN makes predictions in a feedback loop
@@ -226,19 +227,29 @@ class ESN(nn.Module):
         return torch.stack(out_list, dim=1)
 
     def linRegTrain(self, data, wash=2000):
-      # data is of shape num batches x batch dim x ts x space
-      self.allOuts = []
+      '''Trains the ESN using Ridge regression (regularization strength 1e-2)
 
-      for batch in data:
-        hidStates = self.forward(batch[:, :-1], wash, returnHistory=True) # minus last timestep so don't go over dim(desired); shape: batch dim x (ts - wash) x reservoir size
-        hidStates = hidStates.view(-1, hidStates.shape[-1]) # res = reservoir size (set in the ESN section...should encapsulate this process in an object...)
-        print("shape of hid: ", hidStates.size()) 
+      Parameters
+      ----------
+      data : tensor
+          training data in the shape numBatches x batchSize x ts x system state embedding
+      wash : int
+          (default 2000) specifies the number of timesteps in each training sequence that should be used during the washout period'''
+      self.allOuts = [] # contains the learned weights corresponding to each batch in the data
+
+      for i in range(data.shape[0]):
+        batch = data[i]
+        print(f'Training on batch {i}...')
+        # Train the esn on each batch and save the weights that were trained on this batch
+        hidStates = self.forward(batch[:, :-1], wash, returnHistory=True)
+        hidStates = hidStates.view(-1, hidStates.shape[-1])
         desired = batch[:, wash:]
         desired = desired.reshape(-1, desired.shape[-1])
-        
+        # perform ridge regression
         ridge_reg = Ridge(alpha=1e-2, fit_intercept=False)
         ridge_reg.fit(hidStates.cpu(), desired.cpu())
         altWeightArr = np.float32(ridge_reg.coef_)
+        # save the learned weights
         self.allOuts.append(altWeightArr)
       return np.stack(self.allOuts)
 
@@ -247,6 +258,9 @@ class ESN(nn.Module):
       dir: the directory in which to save the network weights'''
       pth = f'{dir}/ESNconfigInSize{self.input_size}outSize{self.output_size}res{self.reservoir_size}avDeg{self.avg_degree}sig{self.sigma}rad{self.radius}leak{self.leakage}'
       torch.save(self.state_dict(), pth)
+
+    
+      
 
     
       

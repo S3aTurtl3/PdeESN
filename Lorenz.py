@@ -47,7 +47,6 @@ def gen_time_series(dt, seconds, initial = (0, 1, 1.05), sig=10, bet=8/3, r=28, 
   else:
     return orig
 
-
 def plot_3D(series, n):
   '''Plots a given time series in 3D
   series: a 2D numpy array where rows are timesteps and cols are spacial
@@ -66,7 +65,7 @@ def plot_3D(series, n):
   s = 10
   cmap = plt.cm.winter
   for i in range(0,n-s,s):
-      ax.plot(x[i:i+s+1], y[i:i+s+1], z[i:i+s+1], color=cmap(i/n), alpha=0.4)
+      ax.plot(x[i:i+ s +1], y[i:i+s+1], z[i:i+s+1], color=cmap(i/n), alpha=0.4)
   # Remove all the axis clutter, leaving just the curve.
   ax.set_axis_off()
 
@@ -74,11 +73,24 @@ def plot_3D(series, n):
   plt.show()
 
 
-# Generate initilal Conditions
 def gen_conditions(numInits, maxCoord):
+  '''gen_conditions(numInits, maxCoord) --> Tensor
+  Generates a set of random (positive) initial conditions for lorenz systems
+  Attempts to create representative sample, creating initial conditions having all 
+  possible combinations of magnitudes for their coordinates. Thus, initial conditions 
+  that are listed early on in the tensor will tend to have coordinates of lower magnitude,
+  while conditions that are listed later on in the tensor will tend to have coordinates of
+  higher magnitude.
+
+  Parameters
+  ----------
+  numInits : int
+      the number of initial conditions to generate
+  maxCoord : int
+      Maximum value that initial conditions'''
   step = math.ceil(maxCoord/numInits)
 
-  # initial states are allowed to get gradually further away; max coord being 50
+  # coordinates of initial states are gradually allowed to have greater magnitudes
   conditions = torch.randint(0, step, (1, 3))
   for i in range(step, maxCoord, step):
     conditions = torch.cat((conditions, torch.randint(0, i+step, (1, 3))), dim=0)
@@ -89,8 +101,22 @@ def gen_conditions(numInits, maxCoord):
 # Generate Training Batches
 def gen_batches(paramCombos, conditions, cropLen=50*1000, numCrops=1, dt=0.02):
   '''
-  paramCombos: a 2D array where each row itemizes a set of dynamical parameters to be used in
-              generating a lorenz system. num rows = num lorenz systems; col1: sigmas; col2: betas; col3: rhos'''
+  Generates batches of lorenz systems to be analyzed using the ESN-Manifold learning method
+
+  Parameters
+  ----------
+  paramCombos : Tensor
+      a 2D array where each row itemizes a set of dynamical parameters to be used in
+      generating a lorenz system. num rows = num lorenz systems; col1: sigmas; col2: betas; col3: rhos
+  conditions : Tensor
+      a 2D tensor containing initial conditions to be used in generating training sequences; each row 
+      contains an initial condition. Initial conditions consist of 3 coordinates x, y, z
+  cropLen : int
+      the length of each training sequence
+  numCrops : int
+      number of segments to split each lorenz system into (so as to create more training examples)
+  dt : float
+      the real value of each unit of discretized time'''
   seriesLen = numCrops*cropLen
   maxT = seriesLen*dt 
 
@@ -100,7 +126,7 @@ def gen_batches(paramCombos, conditions, cropLen=50*1000, numCrops=1, dt=0.02):
     posSig = round(paramCombos[i, 0], 6)
     posBet = round(paramCombos[i, 1], 6)
     posRho = round(paramCombos[i, 2], 6)
-    print(paramCombos[i])
+    print(f'Generating Lorenz with parameters: {paramCombos[i]}')
     examples = []
     for con in conditions:
       # generate lorenz system with selected sigma
