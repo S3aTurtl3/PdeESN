@@ -66,7 +66,7 @@ def plot_prediction(predicted, actual, var, predHoriz = 0,  pth="", desc="", ymi
     testFig.savefig(testPth)
 
 
-def try_examp(model, readoutWeights, paramCombos, weightI, batches, exampI=0, wash=2000, predLen=2000): # save implementation for when you add multi-init learning
+def try_examp(model, readoutWeights, paramCombos, weightI, batches, exampI=0, wash=2000, predLen=2000, pth="", desc=""): # save implementation for when you add multi-init learning
   '''try_examp(model, readoutWeights, paramCombos, weightI, batches, exampI=0, wash=2000, predLen=2000) --> None
   Finds and plots the prediction horizon of one of the ESNs from a Parameter Extraction Test
   '''
@@ -79,9 +79,9 @@ def try_examp(model, readoutWeights, paramCombos, weightI, batches, exampI=0, wa
   prediction = pred[exampI].squeeze(0)
   horizon = horis[exampI]
   testSeq = batch[exampI][wash:wash+predLen]
-  plot_prediction(prediction, testSeq, 0, predHoriz=horizon)
-  plot_prediction(prediction, testSeq, 1, predHoriz=horizon)
-  plot_prediction(prediction, testSeq, 2, predHoriz=horizon)
+  plot_prediction(prediction, testSeq, 0, horizon, pth, desc)
+  plot_prediction(prediction, testSeq, 1, horizon, pth, desc)
+  plot_prediction(prediction, testSeq, 2, horizon, pth, desc)
 
 
 #approx L2 distance
