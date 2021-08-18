@@ -152,3 +152,72 @@ def readout_manifold(method, readouts, numComponents, whichComponents, colors, p
   if pth:
     savePth = pth + f'/{method}/{method}' + desc
     fig.savefig(savePth)
+
+
+import json
+
+class FileManager:
+  '''Creates a json file itemizing all the filenames related to the execution of an ESN test'''
+  def __init__(self, savePth):
+    '''FileManager(savePth) --> FileManager
+    Keeps track of all the filenames related to the execution of an ESN test. 
+    Saves a json file itemizing all the filenames related to the execution of
+    an ESN test
+
+    Parameters
+    ----------
+    savePth: str
+          the jsonFile in which to store the json file with the list of filenames
+    testName : str
+          descriptive name of the test from which these files originate'''
+    self.files = {}
+    if savePth[-5:] != '.json':
+      raise ValueError('savePth does not have valid file extension (expecting .json)')
+    self.nameLog = savePth
+
+  def addFile(self, role, filePth):
+    '''FileManager.addFile(role, filePth)
+    adds the provided file name to the running list of file names
+    
+    Parameters
+    ----------
+    role : string
+        the role that the contents of this file play in the experiment
+        Valid Roles: ESN, DATA, DYNAMS, INITSTATES, READOUTS, PCACOMPS
+    fileName : string
+        the path 
+    '''
+    if not role in ['ESN', 'DATA', 'DYNAMS', 'INITSTATES', 'READOUTS', 'PCACOMPS']:
+      raise ValueError(f'role {role} is not valid ("role" should be among the options: ESN, DATA, DYNAMS, INITSTATES, READOUTS, PCACOMPS)')
+    self.files[role] = filePth
+  
+  def saveFileList(self):
+    '''FileManager.saveFileList()
+    saves the fileNames in a json file, where the keys represent file roles and the
+    values are the filenames'''
+    with open(self.nameLog, "w") as nameLog:
+      json.dump(self.files, nameLog, indent = 4, sort_keys=True)
+
+
+  def locationsOf(self, roles):
+    '''FileManager.locationsOf(roles) --> List
+    returns a dictionary of a subset of the filenames stored under the FileManager,
+    as specified by roles. They keys in the resulting dictionary are the elements of roles,
+    and the values are the corresponding filenames 
+    
+    Parameters
+    ----------
+    roles : list or tuple of str
+        a list of strings denoting the roles of filenames's saved under the FileManager.
+        Valid Roles: ESN, DATA, DYNAMS, INITSTATES, READOUTS, PCACOMPS
+    '''
+    desiredFiles = {}
+    if not self.files:
+      # if self.files is empty, load from json file
+      with open(self.nameLog, "r") as nameLog:
+        self.files = json.load(nameLog)
+    # dictionary of output desired filenames
+    for role in roles:
+      desiredFiles[role] = self.files[role]
+
+    return desiredFiles
