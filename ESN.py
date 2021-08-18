@@ -4,6 +4,7 @@ import numpy as np
 from torch.nn import functional as F
 from sklearn.linear_model import LinearRegression, Ridge
 import torch.sparse
+import base64
 
 
 def load_model(pth):
@@ -12,14 +13,17 @@ def load_model(pth):
   pth: path to the pre-trained network'''
   # Determine network's configuration
   params = []
+  nameI = pth.index('ESNconfig') + len('ESNconfig')
+  esnName = pth[nameI:]
+  esnName = base64.b64decode(esnName).decode('utf-8')
   hyperParamNames = ['InSize', 'outSize', 'res', 'avDeg', 'sig', 'rad', 'leak']
   for i, paramName in enumerate(hyperParamNames):
-    startI = pth.index(paramName) + len(paramName)
+    startI = esnName.index(paramName) + len(paramName)
     if i == len(hyperParamNames) - 1:
-      endI = len(pth)
+      endI = len(esnName)
     else:
-      endI = pth.index(hyperParamNames[i+1])
-    param = float(pth[startI:endI])
+      endI = esnName.index(hyperParamNames[i+1])
+    param = float(esnName[startI:endI])
     print(f'{hyperParamNames[i]}: {param}')
     if int(param) == param:
       param = int(param)
@@ -254,10 +258,17 @@ class ESN(nn.Module):
       return np.stack(self.allOuts)
 
     def save_model(self, dir):
-      '''Saves the network weights to the specified directory location
+      '''Saves the network weights to the specified directory location.
+      Returns the path to which the ESN was saved.
       dir: the directory in which to save the network weights'''
-      pth = f'{dir}/ESNconfigInSize{self.input_size}outSize{self.output_size}res{self.reservoir_size}avDeg{self.avg_degree}sig{self.sigma}rad{self.radius}leak{self.leakage}'
+      esnParams = f'InSize{self.input_size}outSize{self.output_size}res{self.reservoir_size}avDeg{self.avg_degree}sig{self.sigma}rad{self.radius}leak{self.leakage}'
+      esnParams = base64.b64encode(esnParams.encode('utf-8')).decode('utf-8')
+      pth = f'{dir}/ESNs/ESNconfig{esnParams}'
       torch.save(self.state_dict(), pth)
+      return pth
+
+    
+      
 
     
       

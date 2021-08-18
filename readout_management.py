@@ -6,6 +6,7 @@ from sklearn.manifold import TSNE, Isomap, MDS
 from sklearn.decomposition import PCA
 import numpy as np
 import torch.sparse
+import json
 
 
 
@@ -25,7 +26,7 @@ def useForWout(weightArr, network):
     network.Wout.weight = nn.Parameter(weightTns)
 
 
-def plot_prediction(predicted, actual, var, predHoriz = 0,  pth="", desc="", ymin=None, ymax=None):
+def plot_prediction(predicted, actual, var, predHoriz = 0,  saveDir="", desc="", ymin=None, ymax=None):
   '''plot_prediction(predicted, actual, var, desc="", predHoriz=0, ymin=None, ymax=None) --> None
   Plots the networks prediction of a lorenz system's evolution against the actual system
   Note: plot's only a single dimension of the time series' embedding dimension
@@ -61,12 +62,12 @@ def plot_prediction(predicted, actual, var, predHoriz = 0,  pth="", desc="", ymi
     plt.vlines(predHoriz-1, min(actual[:, var]), max(actual[:, var]))
   
   # Save the figure
-  if pth:
-    testPth = pth + f'/predCompareVar{var}' + desc
+  if saveDir:
+    testPth = saveDir + f'/PredComparisons/predCompare_Var{var}' + desc
     testFig.savefig(testPth)
 
 
-def try_examp(model, readoutWeights, paramCombos, weightI, batches, exampI=0, wash=2000, predLen=2000, pth="", desc=""): # save implementation for when you add multi-init learning
+def try_examp(model, readoutWeights, paramCombos, weightI, batches, exampI=0, wash=2000, predLen=2000, saveDir="", desc=""): # save implementation for when you add multi-init learning
   '''try_examp(model, readoutWeights, paramCombos, weightI, batches, exampI=0, wash=2000, predLen=2000) --> None
   Finds and plots the prediction horizon of one of the ESNs from a Parameter Extraction Test
   '''
@@ -79,9 +80,9 @@ def try_examp(model, readoutWeights, paramCombos, weightI, batches, exampI=0, wa
   prediction = pred[exampI].squeeze(0)
   horizon = horis[exampI]
   testSeq = batch[exampI][wash:wash+predLen]
-  plot_prediction(prediction, testSeq, 0, horizon, pth, desc)
-  plot_prediction(prediction, testSeq, 1, horizon, pth, desc)
-  plot_prediction(prediction, testSeq, 2, horizon, pth, desc)
+  plot_prediction(prediction, testSeq, 0, horizon, saveDir, desc)
+  plot_prediction(prediction, testSeq, 1, horizon, saveDir, desc)
+  plot_prediction(prediction, testSeq, 2, horizon, saveDir, desc)
 
 
 #approx L2 distance
@@ -97,7 +98,7 @@ def cos_angle_bet(readout1, readout2):
   return cosA
 
 
-def plot_self_sim(readouts, pth="", desc = ""):
+def plot_self_sim(readouts, saveDir="", desc = ""):
   '''plots a self similarity matrix, using dot product distance as a metric
   for comparison
   
@@ -126,12 +127,12 @@ def plot_self_sim(readouts, pth="", desc = ""):
   cax = divider.append_axes("right", size="5%", pad=0.05)
   plt.colorbar(matrix, cax=cax)
 
-  if pth:
-    ParMatPth = pth + '/MFSCosMat' + desc
+  if saveDir:
+    ParMatPth = saveDir + '/SimMats/CosSim' + desc
     figure.savefig(ParMatPth)
 
 
-def readout_manifold(method, readouts, numComponents, whichComponents, colors, pth="", desc=""):
+def readout_manifold(method, readouts, numComponents, whichComponents, colors, saveDir="", desc=""):
   '''represents readouts on a 2D manifold'''
   assert method in ['pca', 'isomap', 'mds']
   if method == 'pca':
@@ -149,12 +150,17 @@ def readout_manifold(method, readouts, numComponents, whichComponents, colors, p
   plt.ylabel(f"Component {whichComponents[1]}")
   plt.colorbar()
 
-  if pth:
-    savePth = pth + f'/{method}/{method}' + desc
-    fig.savefig(savePth)
+  if saveDir:
+    # save components
+    dataPth = saveDir + f'/ManiComponents/{method}components{desc}.npy'
+    np.save(dataPth, components)
+    # save figure
+    figPth = saveDir + f'/{method}/{method}' + desc
+    fig.savefig(figPth)
+    
 
 
-import json
+
 
 class FileManager:
   '''Creates a json file itemizing all the filenames related to the execution of an ESN test'''
@@ -183,11 +189,11 @@ class FileManager:
     ----------
     role : string
         the role that the contents of this file play in the experiment
-        Valid Roles: ESN, DATA, DYNAMS, INITSTATES, READOUTS, PCACOMPS
+        Valid Roles: ESN, DATA, DYNAMS, READOUTS, PCACOMPS
     fileName : string
         the path 
     '''
-    if not role in ['ESN', 'DATA', 'DYNAMS', 'INITSTATES', 'READOUTS', 'PCACOMPS']:
+    if not role in ['ESN', 'DATA', 'DYNAMS', 'READOUTS', 'PCACOMPS']:
       raise ValueError(f'role {role} is not valid ("role" should be among the options: ESN, DATA, DYNAMS, INITSTATES, READOUTS, PCACOMPS)')
     self.files[role] = filePth
   
@@ -209,7 +215,7 @@ class FileManager:
     ----------
     roles : list or tuple of str
         a list of strings denoting the roles of filenames's saved under the FileManager.
-        Valid Roles: ESN, DATA, DYNAMS, INITSTATES, READOUTS, PCACOMPS
+        Valid Roles: ESN, DATA, DYNAMS, READOUTS, PCACOMPS
     '''
     desiredFiles = {}
     if not self.files:
