@@ -2,6 +2,7 @@ from os import listdir
 import numpy as np
 import base64
 from Lorenz import gen_conditions, gen_batches
+from readout_management import FileManager
 
 def extraction_test_data(numConditions, maxCoord, seriesLen, sigRange, betRange, rhoRange, increments, numCrops, saveDir, fileMan, loadMan=None):
   '''extraction_test_data(numConditions, maxCoord, seriesLen, sigRange, betRange, rhoRange, increments, numCrops, saveDir, fileMan, loadMan=None) --> Tensor
